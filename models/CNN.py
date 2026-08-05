@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from pathlib import Path
+from torch.utils.data import DataLoader, Subset, random_split
 from torchvision import datasets, transforms
 
 # Original transform (kept for comparison)
@@ -26,13 +27,31 @@ test_transform = transforms.Compose([
     transforms.Normalize((0.1307,), (0.3081,))
 ])
 
-train_dataset = datasets.MNIST(
+augmented_train_dataset = datasets.MNIST(
     root="data",
     train=True,
     download=True,
     # transform=transform  # Original transform
     transform=train_transform
 )
+
+# Evaluate validation samples without random training augmentation.
+validation_source = datasets.MNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=test_transform
+)
+
+# Hold out 5,000 reproducibly selected training samples for validation.
+split_generator = torch.Generator().manual_seed(42)
+train_split, validation_split = random_split(
+    range(len(augmented_train_dataset)),
+    [55_000, 5_000],
+    generator=split_generator
+)
+train_dataset = Subset(augmented_train_dataset, train_split.indices)
+validation_dataset = Subset(validation_source, validation_split.indices)
 
 test_dataset = datasets.MNIST(
     root="data",
@@ -50,6 +69,12 @@ train_loader = DataLoader(
 
 test_loader = DataLoader(
     test_dataset,
+    batch_size=64,
+    shuffle=False
+)
+
+validation_loader = DataLoader(
+    validation_dataset,
     batch_size=64,
     shuffle=False
 )
@@ -97,7 +122,23 @@ optimizer = torch.optim.Adam(
     lr=0.001
 )
 
-epochs = 10
+epochs = 20
+checkpoint_path = Path(__file__).resolve().parent / "mnist_cnn_model.pth"
+best_validation_accuracy = 0.0
+
+
+def evaluate(data_loader):
+    model.eval()
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for images, labels in data_loader:
+            predictions = model(images).argmax(dim=1)
+            total += labels.size(0)
+            correct += (predictions == labels).sum().item()
+
+    return 100 * correct / total
 
 for epoch in range(epochs):
     model.train()
@@ -115,27 +156,25 @@ for epoch in range(epochs):
         total_loss += loss.item()
 
     average_loss = total_loss / len(train_loader)
+    validation_accuracy = evaluate(validation_loader)
+
+    if validation_accuracy > best_validation_accuracy:
+        best_validation_accuracy = validation_accuracy
+        torch.save(model.state_dict(), checkpoint_path)
+        save_message = " (saved best model)"
+    else:
+        save_message = ""
 
     print(
         f"Epoch {epoch + 1}/{epochs}, "
-        f"Loss: {average_loss:.4f}"
+        f"Loss: {average_loss:.4f}, "
+        f"Validation accuracy: {validation_accuracy:.2f}%"
+        f"{save_message}"
     )
 
-model.eval()
-
-correct = 0
-total = 0
-
-with torch.no_grad():
-    for images, labels in test_loader:
-        outputs = model(images)
-        predictions = outputs.argmax(dim=1)
-
-        total += labels.size(0)
-        correct += (predictions == labels).sum().item()
-
-accuracy = 100 * correct / total
+# Test only once, using the checkpoint selected by validation performance.
+model.load_state_dict(torch.load(checkpoint_path, map_location="cpu", weights_only=True))
+accuracy = evaluate(test_loader)
 
 print(f"Test accuracy: {accuracy:.2f}%")
-
-torch.save(model.state_dict(), "mnist_cnn_model.pth")
+print(f"Best model saved to: {checkpoint_path}")

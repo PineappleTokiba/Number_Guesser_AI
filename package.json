@@ -1,0 +1,13 @@
+{
+  "name": "number-guesser-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Draw and classify MNIST digits with an MLP or CNN",
+  "main": "app/server.js",
+  "scripts": {
+    "start": "node app/server.js"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.22.0"
+  }
+}

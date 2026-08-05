@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Digit Lab</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div class="mark">28</div>
+      <div><p class="eyebrow">NEURAL PLAYGROUND</p><h1>Digit Lab</h1></div>
+      <p class="intro">Draw a digit. Let the network make its call.</p>
+    </header>
+
+    <section class="workspace">
+      <div class="drawing-panel">
+        <div class="panel-head"><span>INPUT / 28 × 28</span><span class="status"><i></i> READY</span></div>
+        <div class="canvas-wrap">
+          <canvas id="grid" width="560" height="560" aria-label="28 by 28 drawing grid"></canvas>
+        </div>
+        <div class="tools">
+          <label>Brush <input id="brush" type="range" min="1" max="4" value="2"></label>
+          <button id="clear" class="secondary">Clear grid</button>
+        </div>
+      </div>
+
+      <aside>
+        <div class="model-card">
+          <p class="label">SELECT MODEL</p>
+          <div class="segmented">
+            <button data-model="mlp">MLP <small>Dense</small></button>
+            <button data-model="cnn" class="active">CNN <small>Spatial</small></button>
+          </div>
+          <p id="description">Convolutional network · normalized input</p>
+        </div>
+
+        <div class="result-card">
+          <p class="label">PREDICTION</p>
+          <div id="prediction" class="prediction">—</div>
+          <p id="confidence" class="confidence">Draw a number to begin</p>
+          <div id="bars" class="bars"></div>
+        </div>
+        <button id="predict" class="primary">Recognize digit <span>→</span></button>
+      </aside>
+    </section>
+  </main>
+  <script src="./vendor/onnxruntime-web/ort.wasm.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
