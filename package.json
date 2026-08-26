@@ -8,6 +8,7 @@
     "start": "node app/server.js"
   },
   "dependencies": {
+    "onnxruntime-node": "^1.29.0",
     "onnxruntime-web": "^1.22.0"
   }
 }
